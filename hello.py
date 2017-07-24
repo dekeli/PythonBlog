@@ -1,17 +1,41 @@
+#!/usr/bin/python
+# -*- coding: utf-8 -*-
 from flask import Flask, render_template, session, redirect, url_for, flash
 from flask_bootstrap import Bootstrap
 from flask_wtf import FlaskForm
-from wtforms import StringField, SubmitField
+from wtforms import StringField as WtStringFireld, SubmitField
 from wtforms.validators import DataRequired
+from mongoengine import *
 
 app = Flask(__name__)
 bootstrap = Bootstrap(app)
 app.config['SECRET_KEY'] = 'hard to guess string'
 
+# 连接MongoDB
+connect('zhouDB', host='192.168.56.102', username='zhou', password='z')
+
+
+class Role(Document):
+    name = StringField(max_length=64, required=True, unique=True)
+
+    def __repr__(self):
+        return '<Role %r>' % self.name
+
+
+class User(Document):
+    username = StringField(max_length=64, required=True, unique=True)
+    # 文档引用
+    role = ReferenceField(Role)
+
+    def __repr__(self):
+        return '<User %r>' % self.username
+
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
-    name = None
+    admin = Role(name='admin').save()
+    zhou = User(username='zhou').save()
+
     form = NameForm()
     if form.validate_on_submit():
         old_name = session.get('name')
@@ -40,7 +64,7 @@ def internal_server_error(e):
 
 
 class NameForm(FlaskForm):
-    name = StringField('What is your name?', validators=[DataRequired()])
+    name = WtStringFireld('What is your name?', validators=[DataRequired()])
     submit = SubmitField('Submit')
 
 
