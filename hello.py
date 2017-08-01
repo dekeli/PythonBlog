@@ -4,29 +4,32 @@ from flask import Flask, render_template, session, redirect, url_for, flash
 from flask_script import Manager
 from flask_bootstrap import Bootstrap
 from flask_wtf import FlaskForm
+from flask_sqlalchemy import SQLAlchemy
 import wtforms as wt
-import mongoengine as db
 
 app = Flask(__name__)
 manager = Manager(app)
 bootstrap = Bootstrap(app)
 app.config['SECRET_KEY'] = 'hard to guess string'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql://zhou:z@192.168.56.102:3306/python_blog'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = True
+db = SQLAlchemy(app)
 
-# 连接MongoDB
-db.connect('zhouDB', host='192.168.56.102', username='zhou', password='z')
 
-
-class Role(db.Document):
-    name = db.StringField(max_length=64, required=True, unique=True)
+class Role(db.Model):
+    __tablename__ = 'roles'
+    id = db.Column(db.CHAR(36), primary_key=True)
+    name = db.Column(db.CHAR(36), unique=True)
 
     def __repr__(self):
         return '<Role %r>' % self.name
 
 
-class User(db.Document):
-    username = db.StringField(max_length=64, required=True, unique=True)
-    # 文档引用
-    role = db.ReferenceField(Role)
+class User(db.Model):
+    __tablename__ = 'users'
+    id = db.Column(db.CHAR(36), primary_key=True)
+    username = db.Column(db.CHAR(36), unique=True)
+    role_id = db.Column(db.CHAR(36), unique=True)
 
     def __repr__(self):
         return '<User %r>' % self.username
@@ -34,20 +37,21 @@ class User(db.Document):
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
-    form = NameForm()
-    if form.validate_on_submit():
-        user = User.objects(username=form.name.data)
-        if len(user) is 0:
-            User(username=form.name.data).save()
-            session['known'] = False
-        else:
-            session['known'] = True
-        session['name'] = form.name.data
-        form.name.data = None
-        return redirect(url_for('index'))
-    return render_template('index.html',
-                           form=form, name=session.get('name'),
-                           know=session.get('known', False))
+    # form = NameForm()
+    # if form.validate_on_submit():
+    #     user = User.objects(username=form.name.data)
+    #     if len(user) is 0:
+    #         User(username=form.name.data).save()
+    #         session['known'] = False
+    #     else:
+    #         session['known'] = True
+    #     session['name'] = form.name.data
+    #     form.name.data = None
+    #     return redirect(url_for('index'))
+    # return render_template('index.html',
+    #                        form=form, name=session.get('name'),
+    #                        know=session.get('known', False))
+    return render_template('index.html')
 
 
 @app.route('/user/<name>')
@@ -66,7 +70,8 @@ def internal_server_error(e):
 
 
 class NameForm(FlaskForm):
-    name = wt.StringField('What is your name?', validators=[wt.validators.DataRequired()])
+    name = wt.StringField('What is your name?', validators=[
+        wt.validators.DataRequired()])
     submit = wt.SubmitField('Submit')
 
 
